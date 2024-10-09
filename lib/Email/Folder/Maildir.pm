@@ -50,8 +50,15 @@ sub next_message {
     my $what = $self->{_messages} || $self->_what_is_there;
 
     my $file = shift @$what or return;
+
     local *FILE;
-    open FILE, $file or croak "couldn't open '$file' for reading";
+    $! = 0; # reset ERRNO to ensure we only exactly test what we intend to below
+    unless( open FILE, $file ){
+        # if the file no longer exists, hand over to the next file
+        return $self->next_message() if $!{ENOENT};
+        # else complain to the user
+        croak "couldn't open '$file' for reading: $!";
+    }
     join '', <FILE>;
 }
 
